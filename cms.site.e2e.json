@@ -1,0 +1,13 @@
+{
+  "siteId": "test-site",
+  "siteUrl": "http://localhost:4099/site",
+  "brand": {
+    "name": "E2E Co",
+    "eyebrow": "E2E",
+    "headline": "End to *end.*",
+    "tagline": "Prove it works.",
+    "accent": "#a87d2e",
+    "bg": "#16120b",
+    "logo": null
+  }
+}

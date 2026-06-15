@@ -1,0 +1,13 @@
+{
+  "siteId": "test-site",
+  "siteUrl": "http://localhost:4099/site",
+  "brand": {
+    "name": "Test Co",
+    "eyebrow": "TESTING",
+    "headline": "Hello *world.*",
+    "tagline": "Just a test.",
+    "accent": "#a87d2e",
+    "bg": "#16120b",
+    "logo": null
+  }
+}

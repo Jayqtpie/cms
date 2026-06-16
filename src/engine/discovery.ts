@@ -19,6 +19,10 @@ export function readElement(el: HTMLElement, type: FieldType): unknown {
   switch (type) {
     case 'image':
       return el.getAttribute('src') || '';
+    case 'video': {
+      const v = el instanceof HTMLVideoElement ? el : el.querySelector('video');
+      return v?.getAttribute('src') || v?.querySelector('source')?.getAttribute('src') || '';
+    }
     case 'link':
       return { text: el.textContent?.trim() ?? '', href: el.getAttribute('href') ?? '' };
     case 'boolean':

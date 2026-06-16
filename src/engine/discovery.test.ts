@@ -36,3 +36,11 @@ it('discovers a list with its item sub-fields', () => {
   expect(faq!.itemFields!.map((i) => i.key)).toEqual(['q', 'a']);
   expect(faq!.itemFields!.find((i) => i.key === 'a')!.type).toBe('rich');
 });
+
+it('discovers a video field and reads its source as the default', () => {
+  const v = discover(document).find((f) => f.key === 'hero.video');
+  expect(v).toBeTruthy();
+  expect(v!.type).toBe('video');
+  expect(v!.label).toBe('Hero video');
+  expect(v!.defaultContent).toBe('/media/hero.mp4');
+});

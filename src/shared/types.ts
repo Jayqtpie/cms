@@ -1,4 +1,4 @@
-export type FieldType = 'text' | 'rich' | 'image' | 'link' | 'boolean' | 'select';
+export type FieldType = 'text' | 'rich' | 'image' | 'video' | 'link' | 'boolean' | 'select';
 
 export interface ItemField {
   key: string;

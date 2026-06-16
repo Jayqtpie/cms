@@ -30,7 +30,7 @@ export function VideoField({ value, onChange, upload }: Props) {
 
   return (
     <div>
-      <div role="tablist" style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
         <button type="button" aria-pressed={mode === 'upload'} onClick={() => setMode('upload')}>
           Upload
         </button>
@@ -86,6 +86,7 @@ export function VideoField({ value, onChange, upload }: Props) {
           {kind === 'file' ? (
             <video
               src={value}
+              controls
               muted
               playsInline
               style={{ maxWidth: '100%', maxHeight: 160, borderRadius: 6 }}

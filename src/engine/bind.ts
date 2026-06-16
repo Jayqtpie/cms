@@ -34,11 +34,12 @@ function paintEmbed(wrapper: HTMLElement, src: string): void {
 
   clearEmbedObserver(wrapper);
 
-  // Wrapper must clip and position the oversized iframe — but don't override an
-  // explicit author choice for either property.
-  if (!wrapper.style.position || wrapper.style.position === 'static') {
-    wrapper.style.position = 'relative';
-  }
+  // Wrapper must be a positioning context that clips the oversized iframe. Read
+  // the COMPUTED position (not inline style) so a class-based `position:absolute`
+  // — the common case the /cms skill produces — isn't clobbered to relative,
+  // which would collapse an inset:0 wrapper to zero height.
+  const pos = getComputedStyle(wrapper).position;
+  if (!pos || pos === 'static') wrapper.style.position = 'relative';
   if (!wrapper.style.overflow) wrapper.style.overflow = 'hidden';
   clearMedia(wrapper);
 

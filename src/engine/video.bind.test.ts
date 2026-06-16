@@ -90,6 +90,37 @@ it('swaps to a different embed src: disconnects the old observer and creates a n
   vi.unstubAllGlobals();
 });
 
+it('does not clobber a class-based position:absolute on the embed wrapper', () => {
+  vi.stubGlobal('ResizeObserver', FakeRO as unknown as typeof ResizeObserver);
+  // Position comes from a stylesheet class, NOT inline — the common /cms case.
+  document.head.innerHTML = '<style>.wrap{position:absolute;inset:0}</style>';
+  document.body.innerHTML =
+    '<div class="wrap" data-cms="hero.video" data-cms-type="video"><video><source src="/orig.mp4"></video></div>';
+
+  bind({ 'hero.video': 'https://youtu.be/abc123_DEF' });
+
+  const w = document.querySelector<HTMLElement>('[data-cms="hero.video"]')!;
+  // The engine must NOT have written an inline position that overrides the class.
+  expect(w.style.position).toBe('');
+  expect(getComputedStyle(w).position).toBe('absolute');
+
+  document.head.innerHTML = '';
+  vi.unstubAllGlobals();
+});
+
+it('sets position:relative on a static wrapper so the absolute iframe anchors to it', () => {
+  vi.stubGlobal('ResizeObserver', FakeRO as unknown as typeof ResizeObserver);
+  document.body.innerHTML =
+    '<div data-cms="hero.video" data-cms-type="video"><video><source src="/orig.mp4"></video></div>';
+
+  bind({ 'hero.video': 'https://youtu.be/abc123_DEF' });
+
+  const w = document.querySelector<HTMLElement>('[data-cms="hero.video"]')!;
+  expect(w.style.position).toBe('relative');
+
+  vi.unstubAllGlobals();
+});
+
 it('disconnects the embed observer when switching to a file (no leak)', () => {
   FakeRO.instances = [];
   vi.stubGlobal('ResizeObserver', FakeRO as unknown as typeof ResizeObserver);

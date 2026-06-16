@@ -51,6 +51,36 @@ it('renders a list by cloning the template per item', () => {
   expect(rendered[0].querySelector('.faq-q')!.textContent).toBe('Q1');
 });
 
+it('restores an element to its original DOM content when its key is absent (declarative bind)', () => {
+  const headline = document.querySelector('[data-cms="hero.headline"]')!;
+  const tagline = document.querySelector('[data-cms="hero.tagline"]')!;
+  const originalHeadline = headline.innerHTML;
+  const originalTagline = tagline.textContent;
+
+  // Paint both fields.
+  bind({ 'hero.headline': 'Changed headline', 'hero.tagline': 'Changed tagline' }, document);
+  expect(headline.textContent).toBe('Changed headline');
+  expect(tagline.textContent).toBe('Changed tagline');
+
+  // Re-bind with only one key present → the other must revert to its original (this is the undo case).
+  bind({ 'hero.headline': 'Changed headline' }, document);
+  expect(headline.textContent).toBe('Changed headline');
+  expect(tagline.textContent).toBe(originalTagline);
+
+  // Empty content → everything reverts to the original DOM.
+  bind({}, document);
+  expect(headline.innerHTML).toBe(originalHeadline);
+});
+
+it('restores the original image src when the key is absent', () => {
+  const img = document.querySelector<HTMLImageElement>('[data-cms="hero.image"]')!;
+  const originalSrc = img.getAttribute('src');
+  bind({ 'hero.image': '/uploads/new.jpg' }, document);
+  expect(img.getAttribute('src')).toBe('/uploads/new.jpg');
+  bind({}, document);
+  expect(img.getAttribute('src')).toBe(originalSrc);
+});
+
 it('re-rendering a list clears previously rendered items', () => {
   bind({ faq: [{ q: 'Q1', a: 'A1' }] }, document);
   bind({ faq: [{ q: 'Only', a: 'One' }] }, document);

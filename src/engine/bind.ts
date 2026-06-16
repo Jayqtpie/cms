@@ -35,6 +35,39 @@ function baseKey(raw: string): string {
   return at === -1 ? raw : raw.slice(0, at);
 }
 
+// Each [data-cms] element's pristine DOM state, captured once before it is ever
+// painted. This lets bind() be declarative: a key absent from `content` restores
+// the original instead of leaving the last painted value behind (the undo case).
+interface Original {
+  html: string;
+  src: string | null;
+  href: string | null;
+  display: string;
+}
+
+const originals = new WeakMap<HTMLElement, Original>();
+
+function captureOriginal(el: HTMLElement): void {
+  if (originals.has(el)) return;
+  originals.set(el, {
+    html: el.innerHTML,
+    src: el.getAttribute('src'),
+    href: el.getAttribute('href'),
+    display: el.style.display,
+  });
+}
+
+function restoreOriginal(el: HTMLElement): void {
+  const o = originals.get(el);
+  if (!o) return;
+  el.innerHTML = o.html;
+  if (o.src === null) el.removeAttribute('src');
+  else el.setAttribute('src', o.src);
+  if (o.href === null) el.removeAttribute('href');
+  else el.setAttribute('href', o.href);
+  el.style.display = o.display;
+}
+
 export function bindLists(content: Content, root: ParentNode): void {
   root.querySelectorAll<HTMLElement>('[data-cms-list]').forEach((listEl) => {
     const key = listEl.getAttribute('data-cms-list')!;
@@ -59,11 +92,16 @@ export function bindLists(content: Content, root: ParentNode): void {
 
 export function bind(content: Content, root: ParentNode = document, variant = 'default'): void {
   root.querySelectorAll<HTMLElement>('[data-cms]').forEach((el) => {
+    // Capture the pristine state before the first paint so absent keys can restore it.
+    captureOriginal(el);
     const key = baseKey(el.getAttribute('data-cms')!);
     const variantKey = `${key}@${variant}`;
     const value =
       variant !== 'default' && content[variantKey] !== undefined ? content[variantKey] : content[key];
-    if (value === undefined) return;
+    if (value === undefined) {
+      restoreOriginal(el);
+      return;
+    }
     const type = (el.getAttribute('data-cms-type') as FieldType) || 'text';
     paintElement(el, type, value);
   });

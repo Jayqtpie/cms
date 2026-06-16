@@ -61,6 +61,35 @@ it('paints a youtube URL as a cover iframe and observes the container', () => {
   vi.unstubAllGlobals();
 });
 
+it('is idempotent for an unchanged embed value (same iframe node, no extra observer)', () => {
+  FakeRO.instances = [];
+  vi.stubGlobal('ResizeObserver', FakeRO as unknown as typeof ResizeObserver);
+
+  bind({ 'hero.video': 'https://youtu.be/abc123_DEF' });
+  const f1 = wrap().querySelector('iframe');
+  bind({ 'hero.video': 'https://youtu.be/abc123_DEF' });
+  const f2 = wrap().querySelector('iframe');
+  expect(f2).toBe(f1); // same node identity → no reload
+  expect(FakeRO.instances.length).toBe(1); // no second observer created
+
+  vi.unstubAllGlobals();
+});
+
+it('swaps to a different embed src: disconnects the old observer and creates a new one', () => {
+  FakeRO.instances = [];
+  vi.stubGlobal('ResizeObserver', FakeRO as unknown as typeof ResizeObserver);
+
+  bind({ 'hero.video': 'https://youtu.be/abc123_DEF' });
+  bind({ 'hero.video': 'https://vimeo.com/76979871' });
+  expect(FakeRO.instances.length).toBe(2);
+  expect(FakeRO.instances[0].disconnected).toBe(true);
+  expect(wrap().querySelector('iframe')!.getAttribute('src')).toContain(
+    'player.vimeo.com/video/76979871',
+  );
+
+  vi.unstubAllGlobals();
+});
+
 it('disconnects the embed observer when switching to a file (no leak)', () => {
   FakeRO.instances = [];
   vi.stubGlobal('ResizeObserver', FakeRO as unknown as typeof ResizeObserver);

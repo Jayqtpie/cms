@@ -13,10 +13,19 @@ function clearEmbedObserver(el: HTMLElement): void {
 }
 
 function sizeEmbed(wrapper: HTMLElement, iframe: HTMLIFrameElement): void {
+  // When the wrapper has no layout yet (display:none, pre-CSS), coverSize returns
+  // 0×0 and the iframe is briefly invisible; the ResizeObserver re-sizes it once
+  // the container gets a real size, so this self-corrects.
   const r = wrapper.getBoundingClientRect();
   const { w, h } = coverSize(r.width, r.height);
   iframe.style.width = `${w}px`;
   iframe.style.height = `${h}px`;
+}
+
+// Remove only the media nodes the engine manages, leaving any author-owned
+// children (captions, overlays) intact.
+function clearMedia(wrapper: HTMLElement): void {
+  wrapper.querySelectorAll(':scope > video, :scope > iframe').forEach((n) => n.remove());
 }
 
 function paintEmbed(wrapper: HTMLElement, src: string): void {
@@ -25,16 +34,16 @@ function paintEmbed(wrapper: HTMLElement, src: string): void {
 
   clearEmbedObserver(wrapper);
 
-  // Wrapper must clip and position the oversized iframe.
+  // Wrapper must clip and position the oversized iframe — but don't override an
+  // explicit author choice for either property.
   if (!wrapper.style.position || wrapper.style.position === 'static') {
     wrapper.style.position = 'relative';
   }
-  wrapper.style.overflow = 'hidden';
-  wrapper.innerHTML = '';
+  if (!wrapper.style.overflow) wrapper.style.overflow = 'hidden';
+  clearMedia(wrapper);
 
   const iframe = document.createElement('iframe');
   iframe.setAttribute('src', src);
-  iframe.setAttribute('frameborder', '0');
   iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
   iframe.setAttribute('aria-hidden', 'true');
   iframe.style.position = 'absolute';
@@ -58,7 +67,7 @@ function paintVideo(wrapper: HTMLElement, value: unknown): void {
     clearEmbedObserver(wrapper);
     let video = wrapper.querySelector<HTMLVideoElement>(':scope > video');
     if (!video) {
-      wrapper.innerHTML = '';
+      clearMedia(wrapper); // drop a stale embed iframe, keep author children
       video = document.createElement('video');
       video.autoplay = true;
       video.loop = true;

@@ -1,5 +1,5 @@
 import { discover } from './discovery.js';
-import { bind, createStickyBinder } from './bind.js';
+import { createStickyBinder, type StickyBinder } from './bind.js';
 import { createStore } from './store.js';
 import { createLocalAdapter } from './adapters/local.js';
 import { createApiAdapter } from './adapters/api.js';
@@ -37,20 +37,25 @@ function runPreviewMode(cfg: CMSConfig): void {
   parent.postMessage({ type: 'cms-ready' }, '*');
 }
 
-async function runLiveMode(cfg: CMSConfig): Promise<void> {
+export async function runLiveMode(cfg: CMSConfig): Promise<StickyBinder> {
+  // Sticky binder: the published page is also hydrated by Next/React after our
+  // beforeInteractive paint, so the same clobber as preview applies (Bug #2). The
+  // observer re-applies the published content whenever hydration reverts it.
+  const binder = createStickyBinder(document);
   if (cfg.backend.type === 'api' && cfg.backend.base) {
     // Live mode only reads public published content, so no auth token is needed.
     const store = createStore(createApiAdapter(cfg.backend.base, () => null));
-    bind(await store.load(), document);
-    return;
+    binder.apply(await store.load());
+    return binder;
   }
   const local = createLocalAdapter(cfg.siteId);
-  bind(await local.getPublished(), document);
+  binder.apply(await local.getPublished());
   window.addEventListener('storage', async (e) => {
     if (e.key === `cms:${cfg.siteId}:published`) {
-      bind(await local.getPublished(), document);
+      binder.apply(await local.getPublished());
     }
   });
+  return binder;
 }
 
 function init(): void {

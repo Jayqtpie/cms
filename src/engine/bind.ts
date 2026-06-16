@@ -116,6 +116,7 @@ export function createStickyBinder(root: ParentNode = document): StickyBinder {
   const target: Node = (root as Document).body ?? (root as unknown as Node);
   let content: Content | null = null;
   let variant = 'default';
+  let stopped = false;
 
   const reapply = (): void => {
     if (!content) return;
@@ -128,11 +129,13 @@ export function createStickyBinder(root: ParentNode = document): StickyBinder {
 
   return {
     apply(next: Content, nextVariant = 'default'): void {
+      if (stopped) return; // stop() is final: never re-attach a second observer
       content = next;
       variant = nextVariant;
       reapply();
     },
     stop(): void {
+      stopped = true;
       observer.disconnect();
       content = null;
     },

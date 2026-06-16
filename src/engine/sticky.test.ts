@@ -82,3 +82,20 @@ it('stops re-applying after stop() so the observer does not run forever', async 
 
   expect(tagline.textContent).toBe(original); // no re-apply after stop
 });
+
+it('apply() after stop() is a no-op — stop is final, the binder cannot be revived', async () => {
+  const tagline = document.querySelector('[data-cms="hero.tagline"]')!;
+
+  binder = createStickyBinder(document);
+  binder.apply({ 'hero.tagline': 'Draft tagline' });
+  binder.stop();
+
+  // A lingering caller tries to revive a dead binder — must be ignored, so a
+  // stopped binder can never re-attach a second observer to the same root.
+  binder.apply({ 'hero.tagline': 'Revived' });
+  expect(tagline.textContent).toBe('Draft tagline'); // not 'Revived'
+
+  tagline.textContent = 'Server markup';
+  await tick();
+  expect(tagline.textContent).toBe('Server markup'); // observer stays disconnected
+});

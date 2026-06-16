@@ -20,6 +20,7 @@ beforeEach(async () => {
   resetConfigCache();
 });
 afterEach(async () => {
+  delete process.env.CMS_UPLOAD_MAX_MB;
   await fs.rm(dir, { recursive: true, force: true });
 });
 
@@ -95,4 +96,36 @@ it('uploads a file (auth required) and returns a sanitized url', async () => {
     .attach('file', Buffer.from('fake-image-bytes'), 'My Pic.png');
   expect(res.status).toBe(200);
   expect(res.body.url).toMatch(/^\/uploads\/test-site\/my-pic-\d+\.png$/);
+});
+
+it('uploads a video under the size limit', async () => {
+  const app = createApp();
+  const token = await login(app);
+  const res = await request(app)
+    .post('/api/uploads')
+    .set('Authorization', `Bearer ${token}`)
+    .attach('file', Buffer.from('fake-mp4-bytes'), { filename: 'hero.mp4', contentType: 'video/mp4' });
+  expect(res.status).toBe(200);
+  expect(res.body.url).toMatch(/^\/uploads\/test-site\/hero-\d+\.mp4$/);
+});
+
+it('rejects a non-media upload with 400', async () => {
+  const app = createApp();
+  const token = await login(app);
+  const res = await request(app)
+    .post('/api/uploads')
+    .set('Authorization', `Bearer ${token}`)
+    .attach('file', Buffer.from('plain text'), { filename: 'notes.txt', contentType: 'text/plain' });
+  expect(res.status).toBe(400);
+});
+
+it('rejects an upload over the configured size limit with 413', async () => {
+  process.env.CMS_UPLOAD_MAX_MB = '0.0005'; // ~524 bytes
+  const app = createApp();
+  const token = await login(app);
+  const res = await request(app)
+    .post('/api/uploads')
+    .set('Authorization', `Bearer ${token}`)
+    .attach('file', Buffer.alloc(4000), { filename: 'big.mp4', contentType: 'video/mp4' });
+  expect(res.status).toBe(413);
 });

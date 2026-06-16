@@ -1,5 +1,5 @@
 import { discover } from './discovery.js';
-import { bind } from './bind.js';
+import { bind, createStickyBinder } from './bind.js';
 import { createStore } from './store.js';
 import { createLocalAdapter } from './adapters/local.js';
 import { createApiAdapter } from './adapters/api.js';
@@ -18,11 +18,14 @@ function isPreview(): boolean {
 
 function runPreviewMode(cfg: CMSConfig): void {
   const schema = discover(document);
+  // Sticky binder: keeps the draft painted even after Next/React hydration
+  // reconciles the DOM back to server markup on first load (Bug #2).
+  const binder = createStickyBinder(document);
   window.addEventListener('message', (e: MessageEvent) => {
     const msg = e.data as { type?: string; content?: Content; variant?: string; group?: string };
     if (!msg || typeof msg !== 'object') return;
     if (msg.type === 'cms-content' && msg.content) {
-      bind(msg.content, document, msg.variant || 'default');
+      binder.apply(msg.content, msg.variant || 'default');
     }
     if (msg.type === 'cms-scroll' && msg.group) {
       document

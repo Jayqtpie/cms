@@ -90,6 +90,55 @@ export function bindLists(content: Content, root: ParentNode): void {
   });
 }
 
+export interface StickyBinder {
+  apply(content: Content, variant?: string): void;
+  stop(): void;
+}
+
+// What hydration mutates: text/rich/link/list paints land as childList +
+// characterData; image src and link href are attributes. Deliberately NOT
+// observing style/class so Framer Motion animations don't trigger re-paints.
+const STICKY_OBSERVE: MutationObserverInit = {
+  subtree: true,
+  childList: true,
+  characterData: true,
+  attributeFilter: ['src', 'href'],
+};
+
+// In preview the engine paints via beforeInteractive, then Next/React hydration
+// runs and reconciles [data-cms] elements back to their server markup, clobbering
+// the paint (Bug #2). A sticky binder re-applies the last content whenever a stable
+// ancestor (<body>) reports its subtree was reverted, so the draft survives
+// hydration and any later re-render. Observing the ancestor — not each element —
+// keeps it working even when React replaces an element node outright. Writes are
+// done with the observer disconnected so our own paints never re-trigger it.
+export function createStickyBinder(root: ParentNode = document): StickyBinder {
+  const target: Node = (root as Document).body ?? (root as unknown as Node);
+  let content: Content | null = null;
+  let variant = 'default';
+
+  const reapply = (): void => {
+    if (!content) return;
+    observer.disconnect();
+    bind(content, root, variant);
+    observer.observe(target, STICKY_OBSERVE);
+  };
+
+  const observer = new MutationObserver(reapply);
+
+  return {
+    apply(next: Content, nextVariant = 'default'): void {
+      content = next;
+      variant = nextVariant;
+      reapply();
+    },
+    stop(): void {
+      observer.disconnect();
+      content = null;
+    },
+  };
+}
+
 export function bind(content: Content, root: ParentNode = document, variant = 'default'): void {
   root.querySelectorAll<HTMLElement>('[data-cms]').forEach((el) => {
     // Capture the pristine state before the first paint so absent keys can restore it.

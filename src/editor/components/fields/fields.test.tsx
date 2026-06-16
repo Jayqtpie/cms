@@ -4,6 +4,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { TextField } from './TextField.js';
 import { ListField } from './ListField.js';
 import { ImageField } from './ImageField.js';
+import { VideoField } from './VideoField.js';
 
 it('TextField emits changes', () => {
   const onChange = vi.fn();
@@ -55,4 +56,30 @@ it('ImageField shows an error when upload fails', async () => {
   fireEvent.change(input, { target: { files: [new File(['x'], 'x.png', { type: 'image/png' })] } });
   await screen.findByText('Upload failed. Please try again.');
   expect(onChange).not.toHaveBeenCalled();
+});
+
+it('VideoField uploads a dropped file and emits the URL', async () => {
+  const onChange = vi.fn();
+  const upload = vi.fn().mockResolvedValue('/uploads/site/hero.mp4');
+  const { container } = render(<VideoField value="" onChange={onChange} upload={upload} />);
+  const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+  fireEvent.change(input, {
+    target: { files: [new File(['x'], 'hero.mp4', { type: 'video/mp4' })] },
+  });
+  await waitFor(() => expect(onChange).toHaveBeenCalledWith('/uploads/site/hero.mp4'));
+});
+
+it('VideoField accepts a pasted URL in URL mode', () => {
+  const onChange = vi.fn();
+  render(<VideoField value="" onChange={onChange} upload={vi.fn()} />);
+  fireEvent.click(screen.getByRole('button', { name: 'URL' }));
+  fireEvent.change(screen.getByPlaceholderText(/Paste a video URL/), {
+    target: { value: 'https://youtu.be/dQw4w9WgXcQ' },
+  });
+  expect(onChange).toHaveBeenCalledWith('https://youtu.be/dQw4w9WgXcQ');
+});
+
+it('VideoField labels an embed value in its preview', () => {
+  render(<VideoField value="https://youtu.be/dQw4w9WgXcQ" onChange={vi.fn()} upload={vi.fn()} />);
+  expect(screen.getByText(/YouTube embed/)).toBeInTheDocument();
 });

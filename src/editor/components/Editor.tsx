@@ -4,6 +4,7 @@ import { RichField } from './fields/RichField.js';
 import { LinkField } from './fields/LinkField.js';
 import { ImageField } from './fields/ImageField.js';
 import { ListField } from './fields/ListField.js';
+import { VideoField } from './fields/VideoField.js';
 
 interface Props {
   group: string;
@@ -27,6 +28,8 @@ function renderField(
       return <RichField value={String(value ?? '')} onChange={onChange} />;
     case 'image':
       return <ImageField value={String(value ?? '')} onChange={onChange} upload={upload} />;
+    case 'video':
+      return <VideoField value={String(value ?? '')} onChange={onChange} upload={upload} />;
     case 'link':
       return (
         <LinkField

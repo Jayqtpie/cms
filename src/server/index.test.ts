@@ -129,3 +129,14 @@ it('rejects an upload over the configured size limit with 413', async () => {
     .attach('file', Buffer.alloc(4000), { filename: 'big.mp4', contentType: 'video/mp4' });
   expect(res.status).toBe(413);
 });
+
+it('treats a blank CMS_UPLOAD_MAX_MB as the default, not a 1-byte cap', async () => {
+  process.env.CMS_UPLOAD_MAX_MB = '';
+  const app = createApp();
+  const token = await login(app);
+  const res = await request(app)
+    .post('/api/uploads')
+    .set('Authorization', `Bearer ${token}`)
+    .attach('file', Buffer.alloc(4000), { filename: 'ok.mp4', contentType: 'video/mp4' });
+  expect(res.status).toBe(200);
+});

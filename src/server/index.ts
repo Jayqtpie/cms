@@ -29,6 +29,15 @@ export function createApp(): express.Express {
   app.use('/uploads', express.static(path.resolve(uploadDir())));
   app.use('/site', express.static(path.resolve(process.cwd(), 'tests/e2e/fixtures/site')));
 
+  // JSON error handler so route `next(err)` paths don't leak an HTML stack trace.
+  app.use(
+    (err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+      // eslint-disable-next-line no-console
+      console.error(err);
+      res.status(500).json({ error: 'internal server error' });
+    },
+  );
+
   return app;
 }
 

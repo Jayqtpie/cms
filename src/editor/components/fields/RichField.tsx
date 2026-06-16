@@ -5,9 +5,12 @@ interface Props {
 
 export function RichField({ value, onChange }: Props) {
   return (
-    <>
-      <textarea rows={3} value={value ?? ''} onChange={(e) => onChange(e.target.value)} />
-      <div className="hint">Use *stars* for emphasis and new lines for breaks.</div>
-    </>
+    <textarea
+      className="fld-input fld-area"
+      rows={3}
+      value={value ?? ''}
+      spellCheck
+      onChange={(e) => onChange(e.target.value)}
+    />
   );
 }

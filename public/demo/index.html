@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Grooms Get Ready — Demo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Jost:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: 'Jost', system-ui, sans-serif;
+        color: #e9e1d3;
+        background: #100d08;
+        line-height: 1.6;
+      }
+      .wrap { max-width: 1100px; margin: 0 auto; padding: 0 28px; }
+      .eyebrow { font-size: 0.72rem; letter-spacing: 0.4em; text-transform: uppercase; color: #c9a85f; }
+      h1, h2, h3 { font-family: 'Cormorant Garamond', serif; font-weight: 500; color: #f3ece0; letter-spacing: -0.01em; }
+      em { font-style: italic; color: #d8b56b; }
+      a { color: #d8b56b; }
+      section { padding: 90px 0; border-bottom: 1px solid rgba(200, 168, 95, 0.12); }
+
+      .hero {
+        position: relative; min-height: 92vh; display: flex; align-items: center;
+        background: radial-gradient(120% 100% at 0% 0%, #2a2114 0%, #16120b 55%, #100d08 100%);
+        overflow: hidden;
+      }
+      .hero-bg { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0.32; }
+      .hero .wrap { position: relative; z-index: 1; }
+      .hero h1 { font-size: clamp(3rem, 8vw, 6rem); line-height: 0.98; margin: 18px 0 22px; }
+      .hero .sub { font-size: 1.3rem; color: #c8bca6; max-width: 30ch; font-style: italic; font-family: 'Cormorant Garamond', serif; }
+      .cta {
+        display: inline-block; margin-top: 34px; padding: 14px 26px; border: 1px solid #c9a85f;
+        color: #f3ece0; text-decoration: none; letter-spacing: 0.12em; text-transform: uppercase; font-size: 0.78rem;
+      }
+      h2 { font-size: clamp(2rem, 4vw, 3rem); margin-bottom: 14px; }
+      .lead { color: #b6ac9a; max-width: 56ch; font-size: 1.1rem; }
+
+      .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; margin-top: 36px; }
+      .card { border: 1px solid rgba(200, 168, 95, 0.25); border-radius: 10px; padding: 24px; background: rgba(255, 255, 255, 0.02); }
+      .card .price { font-family: 'Cormorant Garamond', serif; font-size: 2rem; color: #d8b56b; margin: 8px 0; }
+
+      .results-photo { width: 100%; height: 320px; border-radius: 12px; margin-top: 28px; background: #1c160d center/cover no-repeat; border: 1px solid rgba(200,168,95,0.2); }
+
+      .faq-item { border-top: 1px solid rgba(200, 168, 95, 0.14); padding: 20px 0; }
+      .faq-q { font-family: 'Cormorant Garamond', serif; font-size: 1.4rem; color: #f3ece0; }
+      .faq-a { color: #b6ac9a; margin-top: 6px; }
+
+      footer { padding: 40px 0; text-align: center; color: #8a8270; font-size: 0.85rem; }
+    </style>
+  </head>
+  <body>
+    <!-- HERO -->
+    <section class="hero" data-cms-group="Hero">
+      <div class="hero-bg" data-cms="hero.background" data-cms-type="image" data-cms-label="Hero background photo" data-cms-hint="A tall, cinematic shot works best" data-cms-group="Hero"></div>
+      <div class="wrap">
+        <div class="eyebrow" data-cms="hero.eyebrow" data-cms-label="Eyebrow" data-cms-group="Hero">Bespoke Wedding Fitness</div>
+        <h1 data-cms="hero.headline" data-cms-type="rich" data-cms-label="Headline" data-cms-hint="New line = line break · wrap a word in *stars* for italic gold" data-cms-group="Hero">Grooms Get *Ready*</h1>
+        <h1 data-cms="hero.headline@bride" data-cms-type="rich" data-cms-group="Hero" hidden>Brides Get *Ready*</h1>
+        <p class="sub" data-cms="hero.subhead" data-cms-type="rich" data-cms-label="Sub-headline" data-cms-group="Hero">Look sharp. Feel ready. Perform at your best.</p>
+        <p class="sub" data-cms="hero.subhead@bride" data-cms-type="rich" data-cms-group="Hero" hidden>Glow, strong and steady, all the way to the aisle.</p>
+        <a class="cta" data-cms="hero.cta" data-cms-label="Button label" data-cms-group="Hero">Begin Your Transformation</a>
+      </div>
+    </section>
+
+    <!-- THE PROMISE -->
+    <section data-cms-group="The Promise">
+      <div class="wrap">
+        <h2 data-cms="promise.title" data-cms-type="rich" data-cms-label="Heading" data-cms-group="The Promise">One goal. *Your best day.*</h2>
+        <p class="lead" data-cms="promise.body" data-cms-type="rich" data-cms-label="Body" data-cms-group="The Promise">Elite, one-to-one coaching that gets you in peak shape for the biggest day of your life — training, nutrition and full support, built entirely around you.</p>
+      </div>
+    </section>
+
+    <!-- PACKAGES -->
+    <section data-cms-group="Packages">
+      <div class="wrap">
+        <h2 data-cms="packages.title" data-cms-label="Heading" data-cms-group="Packages">Packages</h2>
+        <div class="cards" data-cms-list="packages" data-cms-label="Package" data-cms-group="Packages">
+          <template data-cms-item>
+            <div class="card">
+              <h3 class="name" data-cms-field="name"></h3>
+              <div class="price" data-cms-field="price"></div>
+              <p class="blurb" data-cms-field="blurb" data-cms-type="rich"></p>
+            </div>
+          </template>
+        </div>
+      </div>
+    </section>
+
+    <!-- RESULTS -->
+    <section data-cms-group="Results">
+      <div class="wrap">
+        <h2 data-cms="results.title" data-cms-label="Heading" data-cms-group="Results">Real transformations</h2>
+        <div class="results-photo" data-cms="results.photo" data-cms-type="image" data-cms-label="Results photo" data-cms-group="Results"></div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section data-cms-group="FAQ">
+      <div class="wrap">
+        <h2 data-cms="faq.title" data-cms-label="Heading" data-cms-group="FAQ">Questions, answered</h2>
+        <div data-cms-list="faq" data-cms-label="FAQ items" data-cms-group="FAQ">
+          <template data-cms-item>
+            <div class="faq-item">
+              <div class="faq-q" data-cms-field="q"></div>
+              <div class="faq-a" data-cms-field="a" data-cms-type="rich"></div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONTACT -->
+    <section data-cms-group="Contact">
+      <div class="wrap">
+        <h2 data-cms="contact.title" data-cms-label="Heading" data-cms-group="Contact">Ready when you are</h2>
+        <p class="lead">Get in touch: <a data-cms="contact.email" data-cms-type="link" data-cms-label="Email link" data-cms-group="Contact" href="mailto:hello@groomsgetready.co">hello@groomsgetready.co</a></p>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer data-cms-group="Footer">
+      <div class="wrap">
+        <span data-cms="footer.text" data-cms-label="Footer text" data-cms-group="Footer">© Grooms Get Ready — Personal Training</span>
+      </div>
+    </footer>
+
+    <script src="cms.config.js"></script>
+    <script src="/cms/cms-engine.js"></script>
+  </body>
+</html>

@@ -37,9 +37,9 @@ afterEach(() => vi.unstubAllGlobals());
 
 it('shows the branded login then signs in', async () => {
   render(<App />);
-  await waitFor(() => screen.getByRole('button', { name: 'Sign in' }));
-  await userEvent.type(screen.getByPlaceholderText('Password'), 'letmein');
-  await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+  await waitFor(() => screen.getByRole('button', { name: 'Sign in to Content Studio' }));
+  await userEvent.type(screen.getByPlaceholderText('••••••••'), 'letmein');
+  await userEvent.click(screen.getByRole('button', { name: 'Sign in to Content Studio' }));
   await waitFor(() => screen.getByText('Content Studio'));
   expect(localStorage.getItem('cms:token')).toBe('tok');
 });

@@ -7,3 +7,5 @@ public/uploads/
 test-results/
 playwright-report/
 .e2e-data/
+.cms-test-data/
+*.timestamp-*.mjs

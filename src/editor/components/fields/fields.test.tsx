@@ -22,7 +22,7 @@ it('ListField adds an item', () => {
       onChange={onChange}
     />,
   );
-  fireEvent.click(screen.getByText('+ Add item'));
+  fireEvent.click(screen.getByText('Add item'));
   expect(onChange).toHaveBeenCalledWith([{ q: '' }]);
 });
 

@@ -4,6 +4,7 @@ export interface ItemField {
   key: string;
   type: FieldType;
   label: string;
+  hint?: string;
 }
 
 export interface Field {
@@ -12,6 +13,8 @@ export interface Field {
   type: FieldType;
   label: string;
   group: string;
+  /** Optional helper text shown under the field label in the editor. */
+  hint?: string;
   /** Present when key carries an @variant suffix. */
   variant?: string;
   /** True for data-cms-list repeaters. */

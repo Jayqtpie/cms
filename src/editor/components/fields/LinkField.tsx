@@ -1,26 +1,24 @@
-interface LinkValue {
-  text: string;
-  href: string;
-}
 interface Props {
-  value: LinkValue;
-  onChange: (v: LinkValue) => void;
+  value: { text: string; href: string };
+  onChange: (v: { text: string; href: string }) => void;
 }
 
 export function LinkField({ value, onChange }: Props) {
   const v = value ?? { text: '', href: '' };
   return (
-    <div style={{ display: 'grid', gap: 8 }}>
+    <div className="fld-row">
       <input
+        className="fld-input"
         type="text"
-        placeholder="Link text"
-        value={v.text}
+        placeholder="Label"
+        value={v.text ?? ''}
         onChange={(e) => onChange({ ...v, text: e.target.value })}
       />
       <input
+        className="fld-input"
         type="text"
         placeholder="https://…"
-        value={v.href}
+        value={v.href ?? ''}
         onChange={(e) => onChange({ ...v, href: e.target.value })}
       />
     </div>

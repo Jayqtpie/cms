@@ -4,5 +4,13 @@ interface Props {
 }
 
 export function TextField({ value, onChange }: Props) {
-  return <input type="text" value={value ?? ''} onChange={(e) => onChange(e.target.value)} />;
+  return (
+    <input
+      type="text"
+      className="fld-input"
+      value={value ?? ''}
+      spellCheck
+      onChange={(e) => onChange(e.target.value)}
+    />
+  );
 }

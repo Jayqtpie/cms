@@ -20,5 +20,5 @@ it('renders a VideoField for a video-typed field', () => {
     />,
   );
   expect(screen.getByText('Hero video')).toBeInTheDocument();
-  expect(screen.getByText('Drop a video or click to upload')).toBeInTheDocument();
+  expect(screen.getByText('Drag a video here, or click to choose')).toBeInTheDocument();
 });

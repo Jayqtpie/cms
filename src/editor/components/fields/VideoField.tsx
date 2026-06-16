@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { Icon } from '../Icon.js';
 import { classifyVideo } from '../../../engine/video.js';
 
 interface Props {
@@ -30,7 +31,7 @@ export function VideoField({ value, onChange, upload }: Props) {
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+      <div className="vid-seg">
         <button type="button" aria-pressed={mode === 'upload'} onClick={() => setMode('upload')}>
           Upload
         </button>
@@ -41,6 +42,7 @@ export function VideoField({ value, onChange, upload }: Props) {
 
       {mode === 'upload' ? (
         <div
+          className="img-drop"
           role="button"
           tabIndex={0}
           onClick={() => inputRef.current?.click()}
@@ -55,15 +57,11 @@ export function VideoField({ value, onChange, upload }: Props) {
             e.preventDefault();
             void handleFile(e.dataTransfer.files[0]);
           }}
-          style={{
-            border: '1px dashed var(--line)',
-            borderRadius: 'var(--radius-ctrl)',
-            padding: 14,
-            textAlign: 'center',
-            cursor: 'pointer',
-          }}
         >
-          <span className="hint">{busy ? 'Uploading…' : 'Drop a video or click to upload'}</span>
+          <div className="img-empty">
+            <Icon name="upload" size={22} />
+            <span>{busy ? 'Uploading…' : 'Drag a video here, or click to choose'}</span>
+          </div>
           <input
             ref={inputRef}
             type="file"
@@ -74,6 +72,7 @@ export function VideoField({ value, onChange, upload }: Props) {
         </div>
       ) : (
         <input
+          className="fld-input"
           type="text"
           value={value ?? ''}
           placeholder="Paste a video URL — file, YouTube, or Vimeo"
@@ -82,23 +81,19 @@ export function VideoField({ value, onChange, upload }: Props) {
       )}
 
       {value && (
-        <div style={{ marginTop: 10 }}>
+        <div className="vid-preview">
           {kind === 'file' ? (
-            <video
-              src={value}
-              controls
-              muted
-              playsInline
-              style={{ maxWidth: '100%', maxHeight: 160, borderRadius: 6 }}
-            />
+            <video src={value} controls muted playsInline />
           ) : (
-            <span className="hint">{kind === 'youtube' ? 'YouTube' : 'Vimeo'} embed: {value}</span>
+            <span className="fld-hint">
+              {kind === 'youtube' ? 'YouTube' : 'Vimeo'} embed: {value}
+            </span>
           )}
         </div>
       )}
 
       {error && (
-        <div className="hint" style={{ color: 'var(--danger)' }}>
+        <div className="fld-hint" style={{ color: 'var(--danger)' }}>
           {error}
         </div>
       )}

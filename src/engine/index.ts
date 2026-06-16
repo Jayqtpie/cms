@@ -10,10 +10,34 @@ interface CMSConfig {
   backend: { type: 'local' | 'api'; base?: string };
   variants?: { id: string; label: string }[];
   groups?: string[];
+  groupIcons?: Record<string, string>;
 }
 
 function isPreview(): boolean {
   return new URLSearchParams(location.search).get('cms') === 'preview';
+}
+
+/**
+ * Briefly ring an element to show the editor which element a reset (or change)
+ * affected. Uses inline box-shadow (no layout shift); the sticky binder does not
+ * observe style, so this never triggers a re-paint. Saves/restores prior values.
+ */
+export function flashElement(el: HTMLElement): void {
+  const prevShadow = el.style.boxShadow;
+  const prevTransition = el.style.transition;
+  el.style.transition = 'box-shadow 0.15s ease';
+  el.style.boxShadow = '0 0 0 3px rgba(168, 125, 46, 0.65)';
+  window.setTimeout(() => {
+    el.style.boxShadow = prevShadow;
+    window.setTimeout(() => {
+      el.style.transition = prevTransition;
+    }, 200);
+  }, 650);
+}
+
+function baseKey(raw: string): string {
+  const at = raw.indexOf('@');
+  return at === -1 ? raw : raw.slice(0, at);
 }
 
 function runPreviewMode(cfg: CMSConfig): void {
@@ -22,7 +46,13 @@ function runPreviewMode(cfg: CMSConfig): void {
   // reconciles the DOM back to server markup on first load (Bug #2).
   const binder = createStickyBinder(document);
   window.addEventListener('message', (e: MessageEvent) => {
-    const msg = e.data as { type?: string; content?: Content; variant?: string; group?: string };
+    const msg = e.data as {
+      type?: string;
+      content?: Content;
+      variant?: string;
+      group?: string;
+      key?: string;
+    };
     if (!msg || typeof msg !== 'object') return;
     if (msg.type === 'cms-content' && msg.content) {
       binder.apply(msg.content, msg.variant || 'default');
@@ -32,8 +62,23 @@ function runPreviewMode(cfg: CMSConfig): void {
         .querySelector(`[data-cms-group="${msg.group}"]`)
         ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+    if (msg.type === 'cms-flash' && msg.key) {
+      const base = baseKey(msg.key);
+      document
+        .querySelectorAll<HTMLElement>(`[data-cms="${base}"], [data-cms-list="${base}"]`)
+        .forEach((el) => flashElement(el));
+    }
   });
-  parent.postMessage({ type: 'cms-schema', schema, groups: cfg.groups, variants: cfg.variants }, '*');
+  parent.postMessage(
+    {
+      type: 'cms-schema',
+      schema,
+      groups: cfg.groups,
+      variants: cfg.variants,
+      groupIcons: cfg.groupIcons,
+    },
+    '*',
+  );
   parent.postMessage({ type: 'cms-ready' }, '*');
 }
 

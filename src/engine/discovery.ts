@@ -48,6 +48,7 @@ export function discover(root: ParentNode = document): Field[] {
       type,
       label: el.getAttribute('data-cms-label') || humanize(raw),
       group: el.getAttribute('data-cms-group') || 'Content',
+      hint: el.getAttribute('data-cms-hint') || undefined,
       variant: variantOf(raw),
       defaultContent: readElement(el, type),
     });
@@ -61,6 +62,7 @@ export function discover(root: ParentNode = document): Field[] {
           key: f.getAttribute('data-cms-field')!,
           type: (f.getAttribute('data-cms-type') as FieldType) || 'text',
           label: f.getAttribute('data-cms-label') || humanize(f.getAttribute('data-cms-field')!),
+          hint: f.getAttribute('data-cms-hint') || undefined,
         }))
       : [];
     fields.push({
@@ -68,6 +70,7 @@ export function discover(root: ParentNode = document): Field[] {
       type: 'text',
       label: el.getAttribute('data-cms-label') || humanize(key),
       group: el.getAttribute('data-cms-group') || 'Content',
+      hint: el.getAttribute('data-cms-hint') || undefined,
       isList: true,
       itemFields,
       defaultContent: [],

@@ -1,9 +1,12 @@
+import { Icon } from './Icon.js';
 import type { ContentMeta } from '../../shared/types.js';
 
 export type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 export type PublishStatus = 'published' | 'dirty' | 'never';
 
 interface Props {
+  brandName: string;
+  email: string | null;
   saveState: SaveState;
   meta: ContentMeta;
   status: PublishStatus;
@@ -23,35 +26,58 @@ function time(iso: string | null): string {
 export function Topbar(p: Props) {
   const pill =
     p.status === 'published'
-      ? { cls: 'pill pill-ok', text: 'Published & live' }
+      ? { cls: 'pub-pill live', text: 'Published & live' }
       : p.status === 'dirty'
-        ? { cls: 'pill pill-warn', text: 'Unpublished changes' }
-        : { cls: 'pill pill-warn', text: 'Not published yet' };
+        ? { cls: 'pub-pill changes', text: 'Unpublished changes' }
+        : { cls: 'pub-pill new', text: 'Not published yet' };
+
+  const showSaved = (p.saveState === 'saved' || p.saveState === 'idle') && p.meta.lastSaved;
 
   return (
-    <header className="topbar">
-      <div className="brandmark">Content Studio</div>
-      <div className="right">
-        <span className="hint">
-          {p.saveState === 'saving' && 'Saving…'}
-          {p.saveState === 'saved' && `Saved · ${time(p.meta.lastSaved)}`}
-          {p.saveState === 'error' && 'Save failed'}
-        </span>
-        <button className="btn" onClick={p.onUndo} disabled={!p.canUndo}>
-          Undo
+    <header className="top">
+      <div className="top-l">
+        <div className="brandmark">
+          <span className="bm-main">{p.brandName}</span>
+          <span className="bm-tag">Content Studio</span>
+        </div>
+      </div>
+      <div className="top-r">
+        <div className="save-state">
+          {p.saveState === 'saving' && (
+            <span className="ss">
+              <span className="spin" /> Saving…
+            </span>
+          )}
+          {p.saveState === 'error' && <span className="ss error">Save failed</span>}
+          {p.saveState !== 'saving' && p.saveState !== 'error' && showSaved && (
+            <span className="ss saved">
+              <Icon name="check" size={14} /> Saved · {time(p.meta.lastSaved)}
+            </span>
+          )}
+          {p.saveState !== 'saving' && p.saveState !== 'error' && !showSaved && (
+            <span className="ss">All changes auto-save</span>
+          )}
+        </div>
+        <button className="tb-btn ghost" onClick={p.onUndo} disabled={!p.canUndo} title="Undo (Ctrl/Cmd+Z)">
+          <Icon name="undo" size={15} /> Undo
         </button>
-        <button className="btn" onClick={p.onDiscard} disabled={!p.hasChanges}>
+        <button className="tb-btn ghost hide-mid" onClick={p.onDiscard} disabled={!p.hasChanges}>
           Discard
         </button>
-        <a className="btn" href={p.siteUrl} target="_blank" rel="noreferrer">
-          View Live
+        <a className="tb-btn ghost hide-mid" href={p.siteUrl} target="_blank" rel="noreferrer">
+          <Icon name="external" size={14} /> View live
         </a>
-        <span className={pill.cls}>{pill.text}</span>
-        <button className="btn btn-gold" onClick={p.onPublish} disabled={!p.hasChanges}>
-          Publish
-        </button>
-        <button className="btn" onClick={p.onSignOut}>
-          Sign out
+        <div className="pub-wrap">
+          <span className={pill.cls}>
+            <span className="pp-dot" />
+            {pill.text}
+          </span>
+          <button className="tb-btn primary" onClick={p.onPublish} disabled={!p.hasChanges}>
+            <Icon name="rocket" size={15} /> Publish
+          </button>
+        </div>
+        <button className="avatar" onClick={p.onSignOut} title="Sign out">
+          {(p.email || 'A').slice(0, 1).toUpperCase()}
         </button>
       </div>
     </header>

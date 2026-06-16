@@ -7,10 +7,16 @@ export interface VideoSource {
 }
 
 const YT_RE =
-  /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{6,})/;
+  /(?:youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{6,})/;
 const VIMEO_RE = /vimeo\.com\/(?:video\/)?(\d+)/;
 
-export function classifyVideo(url: string): VideoSource {
+/**
+ * Classify a bare video URL into an embed/file source. Expects a single URL
+ * (it does match a URL embedded in surrounding text, but that is not a guarantee).
+ * Anything not recognised as YouTube/Vimeo is returned as `kind: 'file'` with the
+ * URL unchanged. Tolerates null/undefined by treating them as an empty file URL.
+ */
+export function classifyVideo(url: string | null | undefined): VideoSource {
   const u = (url ?? '').trim();
 
   const yt = u.match(YT_RE);

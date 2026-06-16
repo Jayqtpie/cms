@@ -12,8 +12,16 @@ describe('classifyVideo', () => {
     expect(r.src).toContain('playlist=dQw4w9WgXcQ');
   });
 
-  it('classifies youtu.be short links', () => {
-    expect(classifyVideo('https://youtu.be/dQw4w9WgXcQ?t=10').kind).toBe('youtube');
+  it('classifies youtu.be short links and extracts the id (ignoring trailing params)', () => {
+    const r = classifyVideo('https://youtu.be/dQw4w9WgXcQ?t=10');
+    expect(r.kind).toBe('youtube');
+    expect(r.src).toContain('embed/dQw4w9WgXcQ');
+  });
+
+  it('classifies youtube-nocookie embed links', () => {
+    const r = classifyVideo('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ');
+    expect(r.kind).toBe('youtube');
+    expect(r.src).toContain('embed/dQw4w9WgXcQ');
   });
 
   it('classifies youtube shorts', () => {

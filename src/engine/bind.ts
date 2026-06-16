@@ -1,4 +1,89 @@
 import type { Content, FieldType } from '../shared/types.js';
+import { classifyVideo, coverSize } from './video.js';
+
+// One ResizeObserver per embed wrapper, so cover sizing tracks container resize.
+const embedObservers = new WeakMap<HTMLElement, ResizeObserver>();
+
+function clearEmbedObserver(el: HTMLElement): void {
+  const obs = embedObservers.get(el);
+  if (obs) {
+    obs.disconnect();
+    embedObservers.delete(el);
+  }
+}
+
+function sizeEmbed(wrapper: HTMLElement, iframe: HTMLIFrameElement): void {
+  const r = wrapper.getBoundingClientRect();
+  const { w, h } = coverSize(r.width, r.height);
+  iframe.style.width = `${w}px`;
+  iframe.style.height = `${h}px`;
+}
+
+function paintEmbed(wrapper: HTMLElement, src: string): void {
+  const existing = wrapper.querySelector<HTMLIFrameElement>(':scope > iframe');
+  if (existing && existing.getAttribute('src') === src) return; // idempotent: no reload
+
+  clearEmbedObserver(wrapper);
+
+  // Wrapper must clip and position the oversized iframe.
+  if (!wrapper.style.position || wrapper.style.position === 'static') {
+    wrapper.style.position = 'relative';
+  }
+  wrapper.style.overflow = 'hidden';
+  wrapper.innerHTML = '';
+
+  const iframe = document.createElement('iframe');
+  iframe.setAttribute('src', src);
+  iframe.setAttribute('frameborder', '0');
+  iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
+  iframe.setAttribute('aria-hidden', 'true');
+  iframe.style.position = 'absolute';
+  iframe.style.top = '50%';
+  iframe.style.left = '50%';
+  iframe.style.transform = 'translate(-50%, -50%)';
+  iframe.style.border = '0';
+  iframe.style.pointerEvents = 'none';
+  wrapper.appendChild(iframe);
+
+  sizeEmbed(wrapper, iframe);
+  const ro = new ResizeObserver(() => sizeEmbed(wrapper, iframe));
+  ro.observe(wrapper);
+  embedObservers.set(wrapper, ro);
+}
+
+function paintVideo(wrapper: HTMLElement, value: unknown): void {
+  const { kind, src } = classifyVideo(String(value ?? ''));
+
+  if (kind === 'file') {
+    clearEmbedObserver(wrapper);
+    let video = wrapper.querySelector<HTMLVideoElement>(':scope > video');
+    if (!video) {
+      wrapper.innerHTML = '';
+      video = document.createElement('video');
+      video.autoplay = true;
+      video.loop = true;
+      video.muted = true;
+      video.setAttribute('playsinline', '');
+      video.setAttribute('aria-hidden', 'true');
+      video.style.width = '100%';
+      video.style.height = '100%';
+      video.style.objectFit = 'cover';
+      wrapper.appendChild(video);
+    }
+    if (video.getAttribute('src') !== src) {
+      video.querySelectorAll('source').forEach((n) => n.remove());
+      video.setAttribute('src', src);
+      try {
+        video.load();
+      } catch {
+        /* jsdom / unsupported env */
+      }
+    }
+    return;
+  }
+
+  paintEmbed(wrapper, src);
+}
 
 export function renderRich(value: string): string {
   return value.replace(/\*(.+?)\*/g, '<em>$1</em>').replace(/\n/g, '<br>');
@@ -9,6 +94,9 @@ export function paintElement(el: HTMLElement, type: FieldType, value: unknown): 
     case 'image':
       if (el instanceof HTMLImageElement) el.src = String(value);
       else el.style.backgroundImage = `url("${String(value)}")`;
+      break;
+    case 'video':
+      paintVideo(el, value);
       break;
     case 'rich':
       el.innerHTML = renderRich(String(value));
@@ -58,6 +146,7 @@ function captureOriginal(el: HTMLElement): void {
 }
 
 function restoreOriginal(el: HTMLElement): void {
+  clearEmbedObserver(el);
   const o = originals.get(el);
   if (!o) return;
   el.innerHTML = o.html;

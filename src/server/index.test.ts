@@ -4,8 +4,14 @@ import os from 'node:os';
 import path from 'node:path';
 import bcrypt from 'bcryptjs';
 import request from 'supertest';
+import sharp from 'sharp';
 import { createApp } from './index.js';
 import { resetConfigCache } from './config.js';
+import { _resetLimiter } from './login-limiter.js';
+
+// Disable libvips file caching so sharp never holds a handle that blocks the
+// temp-dir cleanup on Windows.
+sharp.cache(false);
 
 let dir: string;
 
@@ -17,10 +23,14 @@ beforeEach(async () => {
   process.env.CMS_SITE_CONFIG = path.resolve(process.cwd(), 'cms.site.test.json');
   process.env.JWT_SECRET = 'test-secret';
   process.env.CMS_PASSWORD = bcrypt.hashSync('letmein', 10);
+  delete process.env.CMS_TOTP_SECRET;
+  _resetLimiter(); // isolate the in-memory login throttle between tests
   resetConfigCache();
 });
 afterEach(async () => {
   delete process.env.CMS_UPLOAD_MAX_MB;
+  delete process.env.CMS_IMAGE_MAX_WIDTH;
+  delete process.env.CMS_IMAGE_QUALITY;
   await fs.rm(dir, { recursive: true, force: true });
 });
 
@@ -38,6 +48,26 @@ it('GET /api/config returns brand config (public)', async () => {
 it('rejects login with a wrong password', async () => {
   const res = await request(createApp()).post('/api/auth/login').send({ password: 'wrong' });
   expect(res.status).toBe(401);
+});
+
+it('locks out after repeated failed logins (429 with Retry-After)', async () => {
+  const app = createApp();
+  for (let i = 0; i < 5; i++) {
+    await request(app).post('/api/auth/login').send({ password: 'wrong' });
+  }
+  // Even the correct password is now refused until the lock expires.
+  const res = await request(app).post('/api/auth/login').send({ password: 'letmein' });
+  expect(res.status).toBe(429);
+  expect(res.headers['retry-after']).toBeDefined();
+});
+
+it('requires a 2FA code when CMS_TOTP_SECRET is configured', async () => {
+  process.env.CMS_TOTP_SECRET = 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ';
+  const app = createApp();
+  const res = await request(app).post('/api/auth/login').send({ password: 'letmein' });
+  expect(res.status).toBe(401); // password alone is not enough
+  const cfg = await request(app).get('/api/config');
+  expect(cfg.body.totp).toBe(true); // editor is told to prompt for the code
 });
 
 it('blocks draft save without a token', async () => {
@@ -139,4 +169,51 @@ it('treats a blank CMS_UPLOAD_MAX_MB as the default, not a 1-byte cap', async ()
     .set('Authorization', `Bearer ${token}`)
     .attach('file', Buffer.alloc(4000), { filename: 'ok.mp4', contentType: 'video/mp4' });
   expect(res.status).toBe(200);
+});
+
+it('re-encodes an uploaded image to optimized webp', async () => {
+  const app = createApp();
+  const token = await login(app);
+  const png = await sharp({
+    create: { width: 1200, height: 800, channels: 3, background: { r: 12, g: 34, b: 56 } },
+  })
+    .png()
+    .toBuffer();
+  const res = await request(app)
+    .post('/api/uploads')
+    .set('Authorization', `Bearer ${token}`)
+    .attach('file', png, { filename: 'Big Photo.PNG', contentType: 'image/png' });
+  expect(res.status).toBe(200);
+  expect(res.body.url).toMatch(/^\/uploads\/test-site\/big-photo-\d+\.webp$/);
+  const fp = path.join(dir, 'uploads', 'test-site', path.basename(res.body.url));
+  expect((await sharp(await fs.readFile(fp)).metadata()).format).toBe('webp');
+});
+
+it('caps a very wide image to CMS_IMAGE_MAX_WIDTH', async () => {
+  process.env.CMS_IMAGE_MAX_WIDTH = '300';
+  const app = createApp();
+  const token = await login(app);
+  const png = await sharp({
+    create: { width: 1000, height: 500, channels: 3, background: { r: 1, g: 2, b: 3 } },
+  })
+    .png()
+    .toBuffer();
+  const res = await request(app)
+    .post('/api/uploads')
+    .set('Authorization', `Bearer ${token}`)
+    .attach('file', png, { filename: 'wide.png', contentType: 'image/png' });
+  expect(res.status).toBe(200);
+  const fp = path.join(dir, 'uploads', 'test-site', path.basename(res.body.url));
+  expect((await sharp(await fs.readFile(fp)).metadata()).width).toBe(300);
+});
+
+it('leaves a video upload unprocessed', async () => {
+  const app = createApp();
+  const token = await login(app);
+  const res = await request(app)
+    .post('/api/uploads')
+    .set('Authorization', `Bearer ${token}`)
+    .attach('file', Buffer.from('not-a-real-mp4'), { filename: 'clip.mp4', contentType: 'video/mp4' });
+  expect(res.status).toBe(200);
+  expect(res.body.url).toMatch(/^\/uploads\/test-site\/clip-\d+\.mp4$/);
 });

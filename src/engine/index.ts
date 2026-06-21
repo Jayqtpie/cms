@@ -1,4 +1,4 @@
-import { discover } from './discovery.js';
+import { discover, discoverSeo } from './discovery.js';
 import { createStickyBinder, type StickyBinder } from './bind.js';
 import { createStore } from './store.js';
 import { createLocalAdapter } from './adapters/local.js';
@@ -41,7 +41,8 @@ function baseKey(raw: string): string {
 }
 
 function runPreviewMode(cfg: CMSConfig): void {
-  const schema = discover(document);
+  // Body fields from the page, plus the synthetic engine-managed SEO group.
+  const schema = [...discover(document), ...discoverSeo(document)];
   // Sticky binder: keeps the draft painted even after Next/React hydration
   // reconciles the DOM back to server markup on first load (Bug #2).
   const binder = createStickyBinder(document);

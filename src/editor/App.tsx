@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import './index.css';
 import type { BrandConfig, Content, ContentMeta, Field } from '../shared/types.js';
+import { diffContent } from '../shared/diff.js';
 import { createApiClient } from './api.js';
 import { Login } from './components/Login.js';
 import { Topbar, type SaveState, type PublishStatus } from './components/Topbar.js';
 import { Sidebar } from './components/Sidebar.js';
 import { Editor } from './components/Editor.js';
 import { Preview } from './components/Preview.js';
+import { ReviewModal } from './components/ReviewModal.js';
 import { Icon } from './components/Icon.js';
 import { accentVars } from './theme.js';
 
@@ -44,9 +46,13 @@ export function App() {
   const [reloadKey, setReloadKey] = useState(0);
   const [resetFlash, setResetFlash] = useState<{ key: string; n: number } | null>(null);
   const [toast, setToast] = useState<Toast>(null);
+  const [reviewing, setReviewing] = useState(false);
+  const [publishing, setPublishing] = useState(false);
 
   const undoStack = useRef<Content[]>([]);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Latest known draft version; sent with each autosave for conflict detection.
+  const draftVersion = useRef(0);
 
   useEffect(() => {
     void api.getConfig().then(setConfig);
@@ -57,6 +63,7 @@ export function App() {
     void api.getDraft().then((b) => {
       setContent(b.content);
       setMeta(b.meta);
+      draftVersion.current = b.version;
     });
     void api.getPublished().then((b) => setPublishedSnap(b.content));
   }, [api, token]);
@@ -89,15 +96,26 @@ export function App() {
       if (saveTimer.current) clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(() => {
         api
-          .saveDraft(next)
-          .then((b) => {
-            setMeta(b.meta);
+          .saveDraft(next, draftVersion.current)
+          .then((res) => {
+            if (res.status === 'conflict') {
+              // The draft changed elsewhere (e.g. another tab). Adopt the
+              // server's current version instead of clobbering it.
+              draftVersion.current = res.current.version;
+              setContent(res.current.content);
+              setMeta(res.current.meta);
+              setSaveState('saved');
+              flash('Reloaded the latest saved changes (edited in another window).', 'warn');
+              return;
+            }
+            draftVersion.current = res.bucket.version;
+            setMeta(res.bucket.meta);
             setSaveState('saved');
           })
           .catch(() => setSaveState('error'));
       }, 350);
     },
-    [api],
+    [api, flash],
   );
 
   const applyChange = useCallback(
@@ -161,23 +179,34 @@ export function App() {
 
   const status: PublishStatus = !meta.lastPublished ? 'never' : hasChanges ? 'dirty' : 'published';
 
-  async function login(emailValue: string, password: string) {
-    const t = await api.login(emailValue, password);
+  async function login(emailValue: string, password: string, code?: string) {
+    const t = await api.login(emailValue, password, code);
     localStorage.setItem(TOKEN_KEY, t);
     if (emailValue) localStorage.setItem(EMAIL_KEY, emailValue);
     setEmail(emailValue || null);
     setToken(t);
   }
 
+  // Changes that publishing would apply, shown in the review modal.
+  const pendingChanges = useMemo(
+    () => diffContent(content, publishedSnap, schema),
+    [content, publishedSnap, schema],
+  );
+
   async function publish() {
+    setPublishing(true);
     try {
       await api.publish();
       const b = await api.getDraft();
       setPublishedSnap(content);
       setMeta(b.meta);
+      draftVersion.current = b.version;
+      setReviewing(false);
       flash('Published — your changes are now live on the site.', 'ok');
     } catch {
       flash('Publish failed — please try again.', 'warn');
+    } finally {
+      setPublishing(false);
     }
   }
 
@@ -186,6 +215,7 @@ export function App() {
       const b = await api.discard();
       setContent(b.content);
       setMeta(b.meta);
+      draftVersion.current = b.version;
       flash('Draft changes discarded — back to the published version.', 'warn');
     } catch {
       flash('Discard failed — please try again.', 'warn');
@@ -217,7 +247,7 @@ export function App() {
         siteUrl={config.siteUrl}
         onUndo={undo}
         onDiscard={() => void discard()}
-        onPublish={() => void publish()}
+        onPublish={() => setReviewing(true)}
         onSignOut={signOut}
       />
       <div className="body">
@@ -256,6 +286,14 @@ export function App() {
           />
         </aside>
       </div>
+      {reviewing && (
+        <ReviewModal
+          changes={pendingChanges}
+          busy={publishing}
+          onConfirm={() => void publish()}
+          onCancel={() => setReviewing(false)}
+        />
+      )}
       {toast && (
         <div className={'toast ' + toast.kind}>
           <Icon name={toast.kind === 'ok' ? 'check' : 'bolt'} size={16} />

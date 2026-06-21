@@ -18,11 +18,11 @@ export function createApiClient(base: string, getToken: () => string | null) {
     async getConfig(): Promise<BrandConfig> {
       return ensureOk(await fetch(`${base}/api/config`)).json();
     },
-    async login(email: string, password: string): Promise<string> {
+    async login(email: string, password: string, code?: string): Promise<string> {
       const r = await fetch(`${base}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, code }),
       });
       if (!r.ok) throw new Error('login failed');
       return ((await r.json()) as { token: string }).token;
@@ -33,14 +33,20 @@ export function createApiClient(base: string, getToken: () => string | null) {
     async getPublished(): Promise<Bucket> {
       return ensureOk(await fetch(`${base}/api/content?state=published`)).json();
     },
-    async saveDraft(content: Content): Promise<Bucket> {
-      return ensureOk(
-        await fetch(`${base}/api/content/draft`, {
-          method: 'PUT',
-          headers: json(),
-          body: JSON.stringify({ content }),
-        }),
-      ).json();
+    async saveDraft(
+      content: Content,
+      version?: number,
+    ): Promise<{ status: 'saved'; bucket: Bucket } | { status: 'conflict'; current: Bucket }> {
+      const r = await fetch(`${base}/api/content/draft`, {
+        method: 'PUT',
+        headers: json(),
+        body: JSON.stringify({ content, version }),
+      });
+      if (r.status === 409) {
+        const body = (await r.json()) as { current: Bucket };
+        return { status: 'conflict', current: body.current };
+      }
+      return { status: 'saved', bucket: await ensureOk(r).json() };
     },
     async publish(): Promise<Bucket> {
       return ensureOk(await fetch(`${base}/api/content/publish`, { method: 'POST', headers: auth() })).json();

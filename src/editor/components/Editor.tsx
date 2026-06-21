@@ -1,4 +1,4 @@
-import type { Field, Content, FieldType } from '../../shared/types.js';
+import { ALT_KEY_SUFFIX, type Field, type Content, type FieldType } from '../../shared/types.js';
 import { Icon } from './Icon.js';
 import { TextField } from './fields/TextField.js';
 import { RichField } from './fields/RichField.js';
@@ -48,12 +48,21 @@ function renderField(
   value: unknown,
   onChange: (v: unknown) => void,
   upload: (file: File) => Promise<string>,
+  altProps?: { value: string; onChange: (v: string) => void },
 ) {
   switch (type) {
     case 'rich':
       return <RichField value={String(value ?? '')} onChange={onChange} />;
     case 'image':
-      return <ImageField value={String(value ?? '')} onChange={onChange} upload={upload} />;
+      return (
+        <ImageField
+          value={String(value ?? '')}
+          onChange={onChange}
+          upload={upload}
+          alt={altProps?.value}
+          onAltChange={altProps?.onChange}
+        />
+      );
     case 'video':
       return <VideoField value={String(value ?? '')} onChange={onChange} upload={upload} />;
     case 'link':
@@ -110,7 +119,18 @@ export function Editor({ group, fields, content, variants, onChange, onReset, up
                     onChange={(items) => onChange(f.key, items)}
                   />
                 ) : (
-                  renderField(f.type, value, (v) => onChange(f.key, v), upload)
+                  renderField(
+                    f.type,
+                    value,
+                    (v) => onChange(f.key, v),
+                    upload,
+                    f.type === 'image' && !f.key.startsWith('seo.')
+                      ? {
+                          value: String(content[`${f.key}${ALT_KEY_SUFFIX}`] ?? ''),
+                          onChange: (v) => onChange(`${f.key}${ALT_KEY_SUFFIX}`, v),
+                        }
+                      : undefined,
+                  )
                 )}
 
                 {!f.isList &&

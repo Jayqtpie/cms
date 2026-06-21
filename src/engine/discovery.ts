@@ -1,4 +1,5 @@
 import type { Field, FieldType, ItemField } from '../shared/types.js';
+import { SEO_FIELDS, SEO_GROUP } from '../shared/seo.js';
 
 export function humanize(key: string): string {
   const last = key.split('.').pop() || key;
@@ -78,4 +79,31 @@ export function discover(root: ParentNode = document): Field[] {
   });
 
   return fields;
+}
+
+function metaContent(doc: Document, attr: string, value: string): string {
+  return doc.querySelector(`meta[${attr}="${value}"]`)?.getAttribute('content') ?? '';
+}
+
+/**
+ * The synthetic "Page & SEO" fields. They aren't marked up on the page (the
+ * engine manages <head>), so their defaults are read from whatever the page
+ * already has: its title, meta description, and og:image.
+ */
+export function discoverSeo(root: ParentNode = document): Field[] {
+  const doc: Document =
+    root instanceof Document ? root : ((root as Node).ownerDocument ?? document);
+  const defaults: Record<string, string> = {
+    'seo.title': doc.title || '',
+    'seo.description': metaContent(doc, 'name', 'description'),
+    'seo.ogImage': metaContent(doc, 'property', 'og:image'),
+  };
+  return SEO_FIELDS.map((f) => ({
+    key: f.key,
+    type: f.type,
+    label: f.label,
+    group: SEO_GROUP,
+    hint: f.hint,
+    defaultContent: defaults[f.key] ?? '',
+  }));
 }

@@ -1,19 +1,52 @@
 import { Router } from 'express';
+import type { Request } from 'express';
 import { signToken, verifyPassword } from '../auth.js';
+import { verifyTotp } from '../totp.js';
+import { lockRemaining, recordFailure, recordSuccess } from '../login-limiter.js';
 
 export const authRouter = Router();
 
+// Throttle is keyed per client. Behind nginx, `trust proxy` (set in index.ts)
+// makes req.ip the real client address rather than the loopback proxy.
+function clientKey(req: Request): string {
+  return req.ip || req.socket.remoteAddress || 'unknown';
+}
+
 authRouter.post('/login', async (req, res) => {
-  const { email, password } = (req.body ?? {}) as { email?: string; password?: string };
+  const { email, password, code } = (req.body ?? {}) as {
+    email?: string;
+    password?: string;
+    code?: string;
+  };
   const hash = process.env.CMS_PASSWORD;
   if (!hash) {
     res.status(500).json({ error: 'server not configured' });
     return;
   }
-  if (!password || !(await verifyPassword(password, hash))) {
+
+  const key = clientKey(req);
+  const wait = lockRemaining(key);
+  if (wait > 0) {
+    const retryAfterSeconds = Math.ceil(wait / 1000);
+    res.setHeader('Retry-After', String(retryAfterSeconds));
+    res.status(429).json({ error: 'too many attempts', retryAfterSeconds });
+    return;
+  }
+
+  const passwordOk = !!password && (await verifyPassword(password, hash));
+  // TOTP is optional: only enforced when CMS_TOTP_SECRET is configured.
+  const totpSecret = process.env.CMS_TOTP_SECRET;
+  const totpOk = !totpSecret || verifyTotp(totpSecret, code ?? '');
+
+  if (!passwordOk || !totpOk) {
+    recordFailure(key);
+    // Deliberately generic so a caller can't distinguish a bad password from a
+    // bad/missing 2FA code.
     res.status(401).json({ error: 'invalid credentials' });
     return;
   }
+
+  recordSuccess(key);
   res.json({ token: signToken({ email: email || 'team' }) });
 });
 

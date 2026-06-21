@@ -5,9 +5,11 @@ interface Props {
   value: string;
   onChange: (url: string) => void;
   upload: (file: File) => Promise<string>;
+  alt?: string;
+  onAltChange?: (alt: string) => void;
 }
 
-export function ImageField({ value, onChange, upload }: Props) {
+export function ImageField({ value, onChange, upload, alt, onAltChange }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [drag, setDrag] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -70,6 +72,15 @@ export function ImageField({ value, onChange, upload }: Props) {
         <div className="fld-hint" style={{ color: 'var(--danger)' }}>
           {error}
         </div>
+      )}
+      {value && onAltChange && (
+        <input
+          className="img-alt"
+          type="text"
+          value={alt ?? ''}
+          placeholder="Describe this image (for search engines & screen readers)"
+          onChange={(e) => onAltChange(e.target.value)}
+        />
       )}
       {value && (
         <button type="button" className="img-remove" onClick={() => onChange('')}>

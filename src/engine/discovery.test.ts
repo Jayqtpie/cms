@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { beforeEach, expect, it } from 'vitest';
-import { discover } from './discovery.js';
+import { discover, discoverSeo } from './discovery.js';
 
 beforeEach(() => {
   document.body.innerHTML = readFileSync(
@@ -43,4 +43,22 @@ it('discovers a video field and reads its source as the default', () => {
   expect(v!.type).toBe('video');
   expect(v!.label).toBe('Hero video');
   expect(v!.defaultContent).toBe('/media/hero.mp4');
+});
+
+it('synthesizes a Page & SEO group with defaults read from <head>', () => {
+  document.title = 'My Site';
+  const meta = document.createElement('meta');
+  meta.setAttribute('name', 'description');
+  meta.setAttribute('content', 'A lovely site.');
+  document.head.appendChild(meta);
+
+  const seo = discoverSeo(document);
+  expect(seo.map((f) => f.key)).toEqual(['seo.title', 'seo.description', 'seo.ogImage']);
+  expect(seo.every((f) => f.group === 'Page & SEO')).toBe(true);
+  expect(seo.find((f) => f.key === 'seo.title')!.defaultContent).toBe('My Site');
+  expect(seo.find((f) => f.key === 'seo.description')!.defaultContent).toBe('A lovely site.');
+  expect(seo.find((f) => f.key === 'seo.ogImage')!.type).toBe('image');
+
+  meta.remove();
+  document.title = '';
 });

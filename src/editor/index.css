@@ -235,3 +235,76 @@ ul { list-style: none; }
   .top { padding: 0 12px; gap: 8px; }
   .ed { padding: 22px 18px 80px; }
 }
+
+/* Review-changes modal (diff before publish) */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 17, 26, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 50;
+}
+.modal {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  width: min(560px, 100%);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  padding: 22px 22px 18px;
+}
+.modal-title { margin: 0 0 4px; font-size: 20px; }
+.modal-lede { margin: 0 0 14px; color: #555; font-size: 14px; }
+.diff-list {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  overflow-y: auto;
+  border: 1px solid #ececf1;
+  border-radius: 10px;
+}
+.diff-row { padding: 10px 14px; border-bottom: 1px solid #f0f0f4; }
+.diff-row:last-child { border-bottom: 0; }
+.diff-head { display: flex; align-items: center; gap: 8px; }
+.diff-tag {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+.diff-tag.added { background: #e7f6ec; color: #1c7a3f; }
+.diff-tag.removed { background: #fdeaea; color: #b3261e; }
+.diff-tag.changed { background: #eef2fd; color: #2f4fb3; }
+.diff-label { font-weight: 600; font-size: 14px; }
+.diff-group { margin-left: auto; font-size: 12px; color: #999; }
+.diff-body {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 5px;
+  font-size: 13px;
+  color: #444;
+  flex-wrap: wrap;
+}
+.diff-before { color: #b3261e; text-decoration: line-through; opacity: 0.8; }
+.diff-after { color: #1c7a3f; }
+.diff-arrow { color: #aaa; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+/* Alt-text input under an image field */
+.img-alt {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  border: 1px solid #d9d9e3;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+.img-alt:focus { outline: none; border-color: var(--accent, #a87d2e); }

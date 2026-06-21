@@ -27,6 +27,9 @@ export interface Field {
 
 export type Content = Record<string, unknown>;
 
+/** Content sub-key holding an image field's alt text, e.g. "hero.image#alt". */
+export const ALT_KEY_SUFFIX = '#alt';
+
 export interface ContentMeta {
   lastSaved: string | null;
   lastPublished: string | null;
@@ -35,12 +38,20 @@ export interface ContentMeta {
 export interface Bucket {
   content: Content;
   meta: ContentMeta;
+  /**
+   * Monotonic draft revision counter, incremented on every saveDraft.
+   * Used as an optimistic-concurrency token: an autosave carrying a stale
+   * version is rejected (409) rather than clobbering a newer write.
+   */
+  version: number;
 }
 
 export interface BrandConfig {
   siteId: string;
   /** URL of the live client site the editor previews. */
   siteUrl: string;
+  /** Whether this site requires a 2FA code at login (set by the server from env). */
+  totp?: boolean;
   brand: {
     name: string;
     eyebrow: string;

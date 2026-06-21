@@ -1,5 +1,6 @@
-import type { Content, FieldType } from '../shared/types.js';
+import { ALT_KEY_SUFFIX, type Content, type FieldType } from '../shared/types.js';
 import { classifyVideo, coverSize } from './video.js';
+import { applySeo } from './seo.js';
 
 // One ResizeObserver per embed wrapper, so cover sizing tracks container resize.
 const embedObservers = new WeakMap<HTMLElement, ResizeObserver>();
@@ -95,8 +96,20 @@ function paintVideo(wrapper: HTMLElement, value: unknown): void {
   paintEmbed(wrapper, src);
 }
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// Safe mini-markup: HTML is escaped first so stored content like "<script>"
+// can never execute, THEN the supported markup (*emphasis*, line breaks) is
+// applied. Without the escape, this innerHTML sink would be an XSS hole.
 export function renderRich(value: string): string {
-  return value.replace(/\*(.+?)\*/g, '<em>$1</em>').replace(/\n/g, '<br>');
+  return escapeHtml(value).replace(/\*(.+?)\*/g, '<em>$1</em>').replace(/\n/g, '<br>');
 }
 
 export function paintElement(el: HTMLElement, type: FieldType, value: unknown): void {
@@ -140,6 +153,7 @@ interface Original {
   html: string;
   src: string | null;
   href: string | null;
+  alt: string | null;
   display: string;
 }
 
@@ -151,6 +165,7 @@ function captureOriginal(el: HTMLElement): void {
     html: el.innerHTML,
     src: el.getAttribute('src'),
     href: el.getAttribute('href'),
+    alt: el.getAttribute('alt'),
     display: el.style.display,
   });
 }
@@ -164,6 +179,8 @@ function restoreOriginal(el: HTMLElement): void {
   else el.setAttribute('src', o.src);
   if (o.href === null) el.removeAttribute('href');
   else el.setAttribute('href', o.href);
+  if (o.alt === null) el.removeAttribute('alt');
+  else el.setAttribute('alt', o.alt);
   el.style.display = o.display;
 }
 
@@ -255,7 +272,17 @@ export function bind(content: Content, root: ParentNode = document, variant = 'd
     }
     const type = (el.getAttribute('data-cms-type') as FieldType) || 'text';
     paintElement(el, type, value);
+    if (type === 'image' && el instanceof HTMLImageElement) {
+      const alt = content[`${key}${ALT_KEY_SUFFIX}`];
+      if (typeof alt === 'string') el.alt = alt;
+    }
   });
 
   bindLists(content, root);
+
+  // Page-level SEO lives in <head>, not in [data-cms] elements, so apply it here.
+  const doc: Document = (root as Document).head
+    ? (root as Document)
+    : ((root as Node).ownerDocument ?? document);
+  applySeo(content, doc);
 }

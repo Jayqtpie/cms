@@ -35,14 +35,56 @@ function loadDotEnv(): void {
 }
 loadDotEnv();
 
+function normaliseOrigin(o: string): string {
+  return o.trim().replace(/\/+$/, '').toLowerCase();
+}
+
+// Origins allowed to make cross-origin API calls: the configured client site
+// (so its cms-engine.js can read published content) plus any extras listed in
+// CMS_ALLOWED_ORIGINS (e.g. apex + www, a staging domain).
+async function allowedOrigins(): Promise<Set<string>> {
+  const set = new Set<string>();
+  try {
+    const { siteUrl } = await loadSiteConfig();
+    if (siteUrl) set.add(normaliseOrigin(new URL(siteUrl).origin));
+  } catch {
+    /* config load errors surface on the /api/config route */
+  }
+  for (const extra of (process.env.CMS_ALLOWED_ORIGINS || '').split(',')) {
+    const t = normaliseOrigin(extra);
+    if (t) set.add(t);
+  }
+  return set;
+}
+
 export function createApp(): express.Express {
   const app = express();
-  app.use(cors());
+  // Behind nginx on the same host, so req.ip reflects the real client (used by
+  // the login throttle) rather than 127.0.0.1.
+  app.set('trust proxy', 'loopback');
+  app.use(
+    cors({
+      origin(origin, cb) {
+        // No Origin header = same-origin or a non-browser client (curl,
+        // server-to-server) — always allowed. Cross-origin must be allow-listed.
+        if (!origin) {
+          cb(null, true);
+          return;
+        }
+        allowedOrigins()
+          .then((set) => cb(null, set.has(normaliseOrigin(origin))))
+          .catch(() => cb(null, false));
+      },
+    }),
+  );
   app.use(express.json({ limit: '1mb' }));
 
   app.get('/api/config', async (_req, res, next) => {
     try {
-      res.json(await loadSiteConfig());
+      const cfg = await loadSiteConfig();
+      // Tell the editor whether to prompt for a 2FA code (derived from env, not
+      // stored in the public config file).
+      res.json({ ...cfg, totp: !!process.env.CMS_TOTP_SECRET });
     } catch (err) {
       next(err);
     }

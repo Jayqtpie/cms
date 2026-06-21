@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import { getSiteId } from '../config.js';
-import { discard, getContent, publish, saveDraft } from '../store.js';
+import { discard, getContent, publish, saveDraft, VersionConflictError } from '../store.js';
 import { requireAuth } from '../middleware/auth.js';
 import type { Content } from '../../shared/types.js';
 
@@ -33,12 +33,21 @@ contentRouter.put(
   '/draft',
   requireAuth,
   wrap(async (req, res) => {
-    const { content } = (req.body ?? {}) as { content?: Content };
+    const { content, version } = (req.body ?? {}) as { content?: Content; version?: number };
     if (typeof content !== 'object' || content === null) {
       res.status(400).json({ error: 'content required' });
       return;
     }
-    res.json(await saveDraft(await getSiteId(), content));
+    try {
+      res.json(await saveDraft(await getSiteId(), content, version));
+    } catch (err) {
+      if (err instanceof VersionConflictError) {
+        // 409 carries the server's current draft so the editor can reconcile.
+        res.status(409).json({ error: 'version conflict', current: err.current });
+        return;
+      }
+      throw err;
+    }
   }),
 );
 

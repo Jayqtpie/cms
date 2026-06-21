@@ -19,10 +19,25 @@ it('paints text and rich content (rich converts *x* and \\n)', () => {
   expect(document.querySelector('[data-cms="hero.tagline"]')!.textContent).toBe('Be your best.');
 });
 
+it('escapes HTML in rich content so stored markup cannot execute', () => {
+  bind({ 'hero.headline': '<img src=x onerror=alert(1)> *hi*' }, document);
+  const html = document.querySelector('[data-cms="hero.headline"]')!.innerHTML;
+  expect(html).not.toContain('<img');
+  expect(html).toContain('&lt;img');
+  expect(html).toContain('<em>hi</em>'); // supported markup still applied
+});
+
 it('paints image src', () => {
   bind({ 'hero.image': '/uploads/test/new.jpg' }, document);
   expect(document.querySelector<HTMLImageElement>('[data-cms="hero.image"]')!.getAttribute('src')).toBe(
     '/uploads/test/new.jpg',
+  );
+});
+
+it('applies alt text from the key#alt content value', () => {
+  bind({ 'hero.image': '/uploads/test/new.jpg', 'hero.image#alt': 'A smiling couple' }, document);
+  expect(document.querySelector<HTMLImageElement>('[data-cms="hero.image"]')!.getAttribute('alt')).toBe(
+    'A smiling couple',
   );
 });
 

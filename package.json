@@ -11,6 +11,7 @@
     "dev:editor": "vite --config vite.editor.config.ts",
     "dev:server": "tsx watch src/server/index.ts",
     "start": "node dist/server/index.js",
+    "set-password": "tsx scripts/set-password.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
@@ -25,7 +26,8 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "sharp": "^0.35.2"
   },
   "devDependencies": {
     "@playwright/test": "^1.47.0",

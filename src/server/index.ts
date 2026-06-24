@@ -2,10 +2,12 @@ import express from 'express';
 import cors from 'cors';
 import path from 'node:path';
 import { readFileSync } from 'node:fs';
-import { loadSiteConfig } from './config.js';
+import { loadSiteConfig, getSiteId } from './config.js';
 import { authRouter } from './routes/auth.js';
 import { contentRouter } from './routes/content.js';
 import { uploadsRouter } from './routes/uploads.js';
+import { exportRouter } from './routes/export.js';
+import { health, logError, startHeartbeat } from './observability.js';
 
 // Load environment from a local .env when present. Works on every Node version
 // (the built-in process.loadEnvFile is 20.12+ only), no dependency. Host-provided
@@ -90,9 +92,13 @@ export function createApp(): express.Express {
     }
   });
 
+  // Public liveness probe for monitoring / the heartbeat dashboard.
+  app.get('/healthz', (_req, res) => res.json(health()));
+
   app.use('/api/auth', authRouter);
   app.use('/api/content', contentRouter);
   app.use('/api/uploads', uploadsRouter);
+  app.use('/api/export', exportRouter);
 
   const dist = path.resolve(process.cwd(), 'dist');
   app.use('/cms', express.static(path.join(dist, 'cms')));
@@ -103,7 +109,8 @@ export function createApp(): express.Express {
 
   // JSON error handler so route `next(err)` paths don't leak an HTML stack trace.
   app.use(
-    (err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    (err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+      logError(err, { method: req.method, url: req.url });
       // eslint-disable-next-line no-console
       console.error(err);
       res.status(500).json({ error: 'internal server error' });
@@ -127,4 +134,6 @@ if (process.env.NODE_ENV !== 'test') {
     // eslint-disable-next-line no-console
     console.log(`Content Studio server listening on :${PORT}`);
   });
+  // Phone home to a central dashboard if configured (no-op otherwise).
+  startHeartbeat(() => getSiteId());
 }

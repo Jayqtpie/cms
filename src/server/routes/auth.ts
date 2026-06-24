@@ -3,6 +3,8 @@ import type { Request } from 'express';
 import { signToken, verifyPassword } from '../auth.js';
 import { verifyTotp } from '../totp.js';
 import { lockRemaining, recordFailure, recordSuccess } from '../login-limiter.js';
+import { getSiteId } from '../config.js';
+import { audit } from '../audit.js';
 
 export const authRouter = Router();
 
@@ -25,9 +27,11 @@ authRouter.post('/login', async (req, res) => {
   }
 
   const key = clientKey(req);
+  const siteId = await getSiteId().catch(() => 'unknown');
   const wait = lockRemaining(key);
   if (wait > 0) {
     const retryAfterSeconds = Math.ceil(wait / 1000);
+    void audit(siteId, 'login.lockout', { ip: key });
     res.setHeader('Retry-After', String(retryAfterSeconds));
     res.status(429).json({ error: 'too many attempts', retryAfterSeconds });
     return;
@@ -40,6 +44,7 @@ authRouter.post('/login', async (req, res) => {
 
   if (!passwordOk || !totpOk) {
     recordFailure(key);
+    void audit(siteId, 'login.failure', { ip: key });
     // Deliberately generic so a caller can't distinguish a bad password from a
     // bad/missing 2FA code.
     res.status(401).json({ error: 'invalid credentials' });
@@ -47,6 +52,7 @@ authRouter.post('/login', async (req, res) => {
   }
 
   recordSuccess(key);
+  void audit(siteId, 'login.success', { ip: key, email: email || 'team' });
   res.json({ token: signToken({ email: email || 'team' }) });
 });
 

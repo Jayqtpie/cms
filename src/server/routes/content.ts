@@ -3,6 +3,7 @@ import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import { getSiteId } from '../config.js';
 import { discard, getContent, publish, saveDraft, VersionConflictError } from '../store.js';
 import { requireAuth } from '../middleware/auth.js';
+import { audit } from '../audit.js';
 import type { Content } from '../../shared/types.js';
 
 export const contentRouter = Router();
@@ -55,7 +56,10 @@ contentRouter.post(
   '/publish',
   requireAuth,
   wrap(async (_req, res) => {
-    res.json(await publish(await getSiteId()));
+    const siteId = await getSiteId();
+    const bucket = await publish(siteId);
+    void audit(siteId, 'publish', { version: bucket.version });
+    res.json(bucket);
   }),
 );
 
@@ -63,6 +67,9 @@ contentRouter.post(
   '/discard',
   requireAuth,
   wrap(async (_req, res) => {
-    res.json(await discard(await getSiteId()));
+    const siteId = await getSiteId();
+    const bucket = await discard(siteId);
+    void audit(siteId, 'discard');
+    res.json(bucket);
   }),
 );

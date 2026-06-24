@@ -5,6 +5,7 @@ import { promises as fs } from 'node:fs';
 import sharp from 'sharp';
 import { getSiteId } from '../config.js';
 import { requireAuth } from '../middleware/auth.js';
+import { audit } from '../audit.js';
 
 function uploadRoot(): string {
   return process.env.CMS_UPLOAD_DIR || path.resolve(process.cwd(), 'public/uploads');
@@ -134,6 +135,7 @@ uploadsRouter.post('/', requireAuth, (req, res, next) => {
       const filename = isRasterImage(req.file.mimetype)
         ? await toWebp(dir, req.file.filename, req.file.mimetype)
         : req.file.filename;
+      void audit(siteId, 'upload', { file: filename });
       res.json({ url: `/uploads/${siteId}/${filename}` });
     })().catch(next);
   });

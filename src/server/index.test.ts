@@ -217,3 +217,33 @@ it('leaves a video upload unprocessed', async () => {
   expect(res.status).toBe(200);
   expect(res.body.url).toMatch(/^\/uploads\/test-site\/clip-\d+\.mp4$/);
 });
+
+it('GET /healthz reports ok with a version (public)', async () => {
+  const res = await request(createApp()).get('/healthz');
+  expect(res.status).toBe(200);
+  expect(res.body.ok).toBe(true);
+  expect(typeof res.body.version).toBe('string');
+  expect(res.body.version).not.toBe('');
+});
+
+it('exports draft, published and an uploads/audit manifest (auth required)', async () => {
+  const app = createApp();
+
+  const noauth = await request(app).get('/api/export');
+  expect(noauth.status).toBe(401);
+
+  const token = await login(app);
+  const auth = { Authorization: `Bearer ${token}` };
+  await request(app).put('/api/content/draft').set(auth).send({ content: { 'hero.headline': 'Hi' } });
+  await request(app).post('/api/content/publish').set(auth);
+
+  const res = await request(app).get('/api/export').set(auth);
+  expect(res.status).toBe(200);
+  expect(res.headers['content-disposition']).toMatch(
+    /attachment; filename="test-site-export-\d+\.json"/,
+  );
+  expect(res.body.siteId).toBe('test-site');
+  expect(res.body.published.content['hero.headline']).toBe('Hi');
+  expect(Array.isArray(res.body.uploads)).toBe(true);
+  expect(Array.isArray(res.body.audit)).toBe(true);
+});

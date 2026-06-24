@@ -61,11 +61,28 @@ Verified in isolation: diff alt-labeling (4/4), SEO head application via jsdom
 
 ---
 
+## Phase 3 — Operability ✅ (complete)
+
+Monitoring approach chosen: **dependency-free** (no Sentry/SaaS).
+
+- **Audit log** ✅ — `audit.ts` appends events to `data/{siteId}/audit.jsonl`: `login.success` / `login.failure` / `login.lockout`, `publish`, `discard`, `upload`. Fire-and-forget so it never blocks or fails a request. Draft autosaves are intentionally not logged (too noisy — publishes are the meaningful "went live" events). `readAudit()` feeds the export.
+- **Health + error log + heartbeat** ✅ — `observability.ts` + `jsonl.ts`. `GET /healthz` (public) returns `{ ok, version, uptimeSeconds, timestamp }`. The error handler logs to `data/errors.jsonl`. If `CMS_HEARTBEAT_URL` is set, the server POSTs a status payload there on startup and every `CMS_HEARTBEAT_INTERVAL_MIN` minutes (default 15) via built-in fetch — the foundation for the Phase 5 fleet dashboard. All no-ops when unconfigured.
+- **Data export** ✅ — authed `GET /api/export` returns a downloadable JSON with draft + published content, the uploads manifest, and the audit trail (`Content-Disposition: attachment`).
+
+New `.env` keys (see `.env.example`): `CMS_HEARTBEAT_URL`, `CMS_HEARTBEAT_INTERVAL_MIN`.
+
+Verified in isolation against the real source (8/8): audit append/read, per-site
+separation, read limit, health, error logging. Route-level tests added to
+`index.test.ts` (healthz, export auth + structure) plus `audit.test.ts` and
+`observability.test.ts`.
+
+---
+
 ## Where this leaves the roadmap
 
-Phases 0, 1, 2 are done. Next per `ROADMAP.md`: **Phase 3 — Operability**
-(audit log, error tracking + health/heartbeat, data export), then **Phase 4**
-(CI, visual-regression, visual parity), then **Phase 5** (fleet ops, deferred).
+Phases 0–3 are done. Next per `ROADMAP.md`: **Phase 4** (CI, visual-regression
+tests, and the visual-parity port from `CMS-ANALYSIS.md`), then **Phase 5**
+(fleet ops — deferred until client count justifies it).
 
 ---
 

@@ -1,0 +1,13 @@
+{
+  "siteId": "fitness-camp-v4",
+  "siteUrl": "http://localhost:3003",
+  "brand": {
+    "name": "Fitness Camp",
+    "eyebrow": "FITNESS BOOTCAMP",
+    "headline": "Edit your site in *minutes.*",
+    "tagline": "Content Studio — live test against fitness-camp-v4.",
+    "accent": "#c9a85f",
+    "bg": "radial-gradient(120% 100% at 0% 0%, #2a2114 0%, #16120b 55%, #100d08 100%)",
+    "logo": null
+  }
+}
